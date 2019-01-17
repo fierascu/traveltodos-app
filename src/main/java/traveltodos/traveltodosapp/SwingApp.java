@@ -58,11 +58,11 @@ public class SwingApp extends JFrame {
 				if (ms != null) {
 					ms.sendMessage("todosQue", msg);
 				} else {
-					logger.error("message is null");
+					logger.error("message is null, can't send:" + msg);
 				}
 			}
 		} catch (Exception e) {
-			System.out.println(e);
+			logger.error(e.getMessage());
 		}
 	}
 
@@ -70,9 +70,8 @@ public class SwingApp extends JFrame {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		/*
-		 * SwingApp window = new SwingApp(); window.showButtonsImplementation();
-		 */
+		SwingApp window = new SwingApp();
+		window.showButtonsImplementation();
 	}
 
 	/**
@@ -81,7 +80,7 @@ public class SwingApp extends JFrame {
 	private void initialize() {
 		frame = new JFrame("TravelTodosApp");
 		frame.setSize(700, 700);
-		frame.setLayout(new GridLayout(3, 1));
+		frame.setLayout(new GridLayout(5, 1));
 		localSend("Start APP @ " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
 
 		frame.addWindowListener(new WindowAdapter() {
@@ -92,7 +91,7 @@ public class SwingApp extends JFrame {
 		});
 		headerLabel = new JLabel("", JLabel.CENTER);
 		statusLabel = new JLabel("", JLabel.CENTER);
-		statusLabel.setSize(350, 100);
+		statusLabel.setSize(100, 50);
 
 		controlPanel = new JPanel();
 		controlPanel.setLayout(new FlowLayout());
@@ -100,36 +99,48 @@ public class SwingApp extends JFrame {
 		frame.add(headerLabel);
 		frame.add(controlPanel);
 		frame.add(statusLabel);
+		
 		frame.setVisible(true);
-
 	}
 
 	private void showButtonsImplementation() {
 		headerLabel.setText("Who is travelling:");
 
-		createButton("Female");
+		controlPanel.add(createButton("Female"));
 
-		createButton("Male");
+		controlPanel.add(createButton("Male"));
 
-		createButton("Kids");
+		controlPanel.add(createButton("Kids"));
 
-		createButton("Baby");
+		controlPanel.add(createButton("Baby"));
 
-		JideButton generateButton = new JideButton("Generate");
-		generateButton.addActionListener(e -> {
+		frame.add(createGenerateButton());
+		
+		frame.add(createJTextArea());
 
-			logger.info(statusLabel.getText());
-
-			Collection c = map.values();// to get values
-			localSend(c.toString());
-			System.out.println(c);
-		});
-
-		controlPanel.add(generateButton);
 		frame.setVisible(true);
 	}
 
-	private void createButton(String text) {
+	private JTextArea createJTextArea() {
+		JTextArea comp = new JTextArea();
+		comp.setEditable(true);
+		comp.setText("Your result will be here. Press Generate!");
+		comp.setSize(100, 50);
+		return comp;
+	}
+
+	private JideButton createGenerateButton() {
+		JideButton button = new JideButton("Generate");
+		button.setName("button_Generate");
+		button.addActionListener(e -> {
+			logger.info(statusLabel.getText());
+			String resultedString = map.values().toString();
+			localSend(resultedString);
+		});
+		return button;
+	}
+
+	private JideButton createButton(String text) {
 		JideButton button = new JideButton(text);
 		button.setName("button_" + text);
 		button.addActionListener(e -> {
@@ -154,12 +165,9 @@ public class SwingApp extends JFrame {
 				map.put(plan.getType(), plan.getWanted());
 			}
 
-//            System.out.println("For your choice "
-//                    + plan.getType() + " you have to take " + plan.getWanted());
-
 		});
 
-		controlPanel.add(button);
+		return button;
 	}
 
 	private KieSession openKieService() {
