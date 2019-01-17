@@ -37,12 +37,11 @@ public class TraveltodosAppApplication {
     }
 
 	public static void main(String[] args) {
-        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(SwingApp.class)
+        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(TraveltodosAppApplication.class)
                 .headless(false).run(args);
 
         EventQueue.invokeLater(() -> {
-            SwingApp ex = ctx.getBean(SwingApp.class);
-            ex.setVisible(true);
+        	ctx.getBean(SwingApp.class);
         });
 
 	}
