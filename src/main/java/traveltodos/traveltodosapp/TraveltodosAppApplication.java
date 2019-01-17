@@ -1,6 +1,9 @@
 package traveltodos.traveltodosapp;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.kie.api.runtime.KieContainer;
+import org.kie.api.runtime.KieSession;
+import org.kie.api.runtime.rule.FactHandle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -12,6 +15,9 @@ import org.springframework.core.env.Environment;
 
 import javax.jms.ConnectionFactory;
 import java.awt.*;
+
+import org.kie.api.KieServices;
+
 
 
 @SpringBootApplication
