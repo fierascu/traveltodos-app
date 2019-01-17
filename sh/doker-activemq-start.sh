@@ -1,2 +1,2 @@
-docker start -i activemq-docker
-pause
+#!/bin/bash
+docker start -i activemq-dockers
