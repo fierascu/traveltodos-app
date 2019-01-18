@@ -37,6 +37,7 @@ import org.springframework.jms.core.JmsTemplate;
 
 import com.jidesoft.swing.JideButton;
 import com.traveltodos.drools.TravelPlan;
+import com.traveltodos.drools.TravelPlanConfiguration;
 import com.traveltodos.messaging.MessageSender;
 
 @SpringBootApplication
@@ -54,24 +55,18 @@ public class SwingApp extends JFrame {
 	private JLabel statusLabel;
 	private JPanel controlPanel;
 	private JTextArea textArea;
-
+	
 	private static KieSession kieSession;
 
 	private MessageSender ms;
 
-	private final ApplicationContext appContext;
-
-	private final Environment env;
-
 	@Autowired
-	public SwingApp(ApplicationContext appContext, Environment env, MessageSender ms) throws HeadlessException {
-		this.appContext = appContext;
-		this.env = env;
+	public SwingApp(MessageSender ms, TravelPlanConfiguration tpc) throws HeadlessException {
 		this.ms = ms;
+		SwingApp.kieSession = tpc.getKieSession();
 
 		initialize();
 		showButtonsImplementation();
-		setUpDrools();
 
 	}
 
@@ -130,26 +125,6 @@ public class SwingApp extends JFrame {
 		frame.add(textArea);
 
 		frame.setVisible(true);
-	}
-
-	private void setUpDrools() {
-
-		String rulesxlsFilename = env.getProperty("traveltodos.rulesxls-filename");
-
-		KieServices kieServices = KieServices.Factory.get();
-		Resource dt = ResourceFactory.newClassPathResource(rulesxlsFilename, getClass());
-
-		KieFileSystem kieFileSystem = kieServices.newKieFileSystem().write(dt);
-
-		KieBuilder kieBuilder = kieServices.newKieBuilder(kieFileSystem);
-		kieBuilder.buildAll();
-
-		KieRepository kieRepository = kieServices.getRepository();
-
-		ReleaseId krDefaultReleaseId = kieRepository.getDefaultReleaseId();
-		KieContainer kieContainer = kieServices.newKieContainer(krDefaultReleaseId);
-
-		kieSession = kieContainer.newKieSession();
 	}
 
 	private void localSend(String msg) {
