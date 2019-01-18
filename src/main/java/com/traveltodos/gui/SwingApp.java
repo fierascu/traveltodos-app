@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
@@ -15,10 +16,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
-import org.kie.api.KieServices;
 import org.kie.api.io.ResourceType;
-import org.kie.api.runtime.KieContainer;
-import org.kie.api.runtime.KieSession;
 import org.kie.internal.KnowledgeBase;
 import org.kie.internal.KnowledgeBaseFactory;
 import org.kie.internal.builder.DecisionTableConfiguration;
@@ -53,6 +51,8 @@ public class SwingApp extends JFrame {
 	private JLabel statusLabel;
 	private JPanel controlPanel;
 	private JTextArea textArea;
+	private KnowledgeBase knowledgeBase;
+	private static StatelessKnowledgeSession session;
 
 	@Autowired
 	MessageSender ms;
@@ -68,7 +68,17 @@ public class SwingApp extends JFrame {
 	 */
 	public SwingApp() {
 		initialize();
-		this.showButtonsImplementation();
+		showButtonsImplementation();
+		setUpDrools();
+	}
+
+	private void setUpDrools() {
+		try {
+			knowledgeBase = createKnowledgeBaseFromSpreadsheet();
+		} catch (Exception e1) {
+			logger.error(e1.getMessage());
+		}
+		session = knowledgeBase.newStatelessKnowledgeSession();
 
 	}
 
@@ -102,6 +112,11 @@ public class SwingApp extends JFrame {
 	private void initialize() {
 		frame = new JFrame("TravelTodosApp");
 		frame.setSize(700, 700);
+
+		String imagePath = "frame-icon.jpg";
+		Image icon = new javax.swing.ImageIcon(imagePath).getImage();
+		frame.setIconImage(icon);
+
 		frame.setLayout(new GridLayout(5, 1));
 		localSend("Start APP @ " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
 
@@ -158,20 +173,11 @@ public class SwingApp extends JFrame {
 		button.addActionListener(e -> {
 			logger.info(statusLabel.getText());
 
-			KnowledgeBase knowledgeBase = null;
-			try {
-				knowledgeBase = createKnowledgeBaseFromSpreadsheet();
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-			session = knowledgeBase.newStatelessKnowledgeSession();
-
 			HashMap<String, String> travelResultsMap = new HashMap<String, String>();
 			Component[] panelComponents = controlPanel.getComponents();
 			for (int i = 0; i < panelComponents.length; i++) {
-				if (((JideButton) panelComponents[i]).getName().startsWith("button_") 
-						&& ((JideButton) panelComponents[i]).getForeground() == Color.BLUE ) {
+				if (((JideButton) panelComponents[i]).getName().startsWith("button_")
+						&& ((JideButton) panelComponents[i]).getForeground() == Color.BLUE) {
 
 					String buttonText = ((JideButton) panelComponents[i]).getText();
 
@@ -230,8 +236,6 @@ public class SwingApp extends JFrame {
 //		}
 //		return kSession;
 //	}
-
-	private static StatelessKnowledgeSession session;
 
 	private static KnowledgeBase createKnowledgeBaseFromSpreadsheet() throws Exception {
 		DecisionTableConfiguration dtconf = KnowledgeBuilderFactory.newDecisionTableConfiguration();
