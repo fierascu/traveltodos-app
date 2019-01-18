@@ -30,9 +30,7 @@ public class MessageSender {
 	@PostConstruct
 	public void init() {
 		this.jmsTemplate = new JmsTemplate(connectionFactory);
-
 		this.queName = env.getProperty("spring.activemq.que-name");
-
 	}
 
 	public void sendMessage(String queueName, String message) {
