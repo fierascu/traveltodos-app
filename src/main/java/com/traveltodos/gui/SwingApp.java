@@ -1,6 +1,7 @@
 package com.traveltodos.gui;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.WindowAdapter;
@@ -15,8 +16,17 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
 import org.kie.api.KieServices;
+import org.kie.api.io.ResourceType;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
+import org.kie.internal.KnowledgeBase;
+import org.kie.internal.KnowledgeBaseFactory;
+import org.kie.internal.builder.DecisionTableConfiguration;
+import org.kie.internal.builder.DecisionTableInputType;
+import org.kie.internal.builder.KnowledgeBuilder;
+import org.kie.internal.builder.KnowledgeBuilderFactory;
+import org.kie.internal.io.ResourceFactory;
+import org.kie.internal.runtime.StatelessKnowledgeSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +35,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 
 import com.jidesoft.swing.JideButton;
+import com.traveltodos.drools.TravelPlan;
 import com.traveltodos.messaging.MessageSender;
 
 @SpringBootApplication
@@ -41,6 +52,7 @@ public class SwingApp extends JFrame {
 	private JLabel headerLabel;
 	private JLabel statusLabel;
 	private JPanel controlPanel;
+	private JTextArea textArea;
 
 	@Autowired
 	MessageSender ms;
@@ -50,10 +62,6 @@ public class SwingApp extends JFrame {
 
 	@Autowired
 	private Environment env;
-
-	TravelPlan plan = new TravelPlan();
-
-	HashMap<String, String> map = new HashMap<String, String>();
 
 	/**
 	 * Create the application.
@@ -130,7 +138,8 @@ public class SwingApp extends JFrame {
 
 		frame.add(createGenerateButton());
 
-		frame.add(createJTextArea());
+		textArea = createJTextArea();
+		frame.add(textArea);
 
 		frame.setVisible(true);
 	}
@@ -148,8 +157,34 @@ public class SwingApp extends JFrame {
 		button.setName("button_Generate");
 		button.addActionListener(e -> {
 			logger.info(statusLabel.getText());
-			String resultedString = map.values().toString();
+
+			KnowledgeBase knowledgeBase = null;
+			try {
+				knowledgeBase = createKnowledgeBaseFromSpreadsheet();
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			session = knowledgeBase.newStatelessKnowledgeSession();
+
+			HashMap<String, String> travelResultsMap = new HashMap<String, String>();
+			Component[] panelComponents = controlPanel.getComponents();
+			for (int i = 0; i < panelComponents.length; i++) {
+				if (((JideButton) panelComponents[i]).getName().startsWith("button_") 
+						&& ((JideButton) panelComponents[i]).getForeground() == Color.BLUE ) {
+
+					String buttonText = ((JideButton) panelComponents[i]).getText();
+
+					TravelPlan plan = new TravelPlan(buttonText);
+					session.execute(plan);
+					travelResultsMap.put(plan.getType(), plan.getWanted());
+				}
+			}
+
+			String resultedString = travelResultsMap.values().toString();
+			textArea.setText(resultedString);
 			localSend(resultedString);
+
 		});
 		return button;
 	}
@@ -157,42 +192,62 @@ public class SwingApp extends JFrame {
 	private JideButton createButton(String text) {
 		JideButton button = new JideButton(text);
 		button.setName("button_" + text);
+		button.setForeground(Color.BLACK);
 		button.addActionListener(e -> {
 			logger.info(statusLabel.getText());
 
-			if (button.getForeground().getBlue() == 51 || button.getForeground().getBlue() == 0) {
+			if (button.getForeground() == Color.BLACK) {
 				button.setForeground(Color.BLUE);
 			} else {
 				button.setForeground(Color.BLACK);
 			}
-			plan.setType(button.getText());
-
-			KieSession session = openKieService();
-
-			session.insert(plan);
-			session.fireAllRules();
-
-			if (map.containsKey(plan.getType())) {
-				map.remove(plan.getType());
-			} else {
-				map.put(plan.getType(), plan.getWanted());
-			}
+//			plan.setType(button.getText());
+//
+//			KieSession session = openKieService();
+//
+//			session.insert(plan);
+//			session.fireAllRules();
+//
+//			if (map.containsKey(plan.getType())) {
+//				map.remove(plan.getType());
+//			} else {
+//				map.put(plan.getType(), plan.getWanted());
+//			}
 
 		});
 
 		return button;
 	}
 
-	private KieSession openKieService() {
-		KieSession kSession = null;
-		try {
-			KieServices ks = KieServices.Factory.get();
-			KieContainer kContainer = ks.getKieClasspathContainer();
-			kSession = kContainer.newKieSession("ksession-rule");
-		} catch (Throwable t) {
-			t.printStackTrace();
+//	private KieSession openKieService() {
+//		KieSession kSession = null;
+//		try {
+//			KieServices ks = KieServices.Factory.get();
+//			KieContainer kContainer = ks.getKieClasspathContainer();
+//			kSession = kContainer.newKieSession("ksession-rule");
+//		} catch (Throwable t) {
+//			t.printStackTrace();
+//		}
+//		return kSession;
+//	}
+
+	private static StatelessKnowledgeSession session;
+
+	private static KnowledgeBase createKnowledgeBaseFromSpreadsheet() throws Exception {
+		DecisionTableConfiguration dtconf = KnowledgeBuilderFactory.newDecisionTableConfiguration();
+		dtconf.setInputType(DecisionTableInputType.XLS);
+
+		KnowledgeBuilder knowledgeBuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
+		knowledgeBuilder.add(ResourceFactory.newClassPathResource("travel-plan-rules.xls"), ResourceType.DTABLE,
+				dtconf);
+
+		if (knowledgeBuilder.hasErrors()) {
+			throw new RuntimeException(knowledgeBuilder.getErrors().toString());
 		}
-		return kSession;
+
+		KnowledgeBase knowledgeBase = KnowledgeBaseFactory.newKnowledgeBase();
+		knowledgeBase.addKnowledgePackages(knowledgeBuilder.getKnowledgePackages());
+		return knowledgeBase;
 	}
 
 }

@@ -20,7 +20,7 @@
 		<java.version>1.8</java.version>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
-		<start-class>traveltodos.traveltodosapp.TraveltodosAppApplication</start-class>
+		<start-class>com.traveltodos.gui.TraveltodosAppApplication</start-class>
 		<spring-boot-admin.version>2.1.1</spring-boot-admin.version>
 		<spring-cloud.version>Greenwich.RC2</spring-cloud.version>
 		<drools.version>6.4.0.Final</drools.version>
@@ -188,17 +188,6 @@
 	</dependencyManagement>
 
 	<build>
-		<sourceDirectory>src</sourceDirectory>
-		<resources>
-			<!-- <resource>
-				<directory>src/main/resources</directory>
-				<includes>
-					<include>META-INF/kmodule.xml</include>
-					<include>com/site/myapp/checks/departure/Departure.drl</include>
-				</includes>
-				<targetPath>.</targetPath>
-			</resource> -->
-		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
