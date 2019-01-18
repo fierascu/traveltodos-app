@@ -1,4 +1,4 @@
-//package traveltodos.traveltodosapp;
+//package com.traveltodos.gui;
 //
 //import org.junit.Test;
 //import org.junit.runner.RunWith;

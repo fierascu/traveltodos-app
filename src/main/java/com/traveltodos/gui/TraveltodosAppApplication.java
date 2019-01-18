@@ -1,4 +1,4 @@
-package traveltodos.traveltodosapp;
+package com.traveltodos.gui;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.kie.api.runtime.KieContainer;
@@ -18,33 +18,29 @@ import java.awt.*;
 
 import org.kie.api.KieServices;
 
-
-
 @SpringBootApplication
 @Configuration
-@ComponentScan
+@ComponentScan({ "com.traveltodos", "com.traveltodos.messaging" })
 public class TraveltodosAppApplication {
 
+	@Autowired
+	private Environment env;
 
-    @Autowired
-    private Environment env;
-
-    @Bean
-    public ConnectionFactory connectionFactory() {
-        String activeMqUrl = env.getProperty("spring.activemq.broker-url");
-        ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(activeMqUrl);
-        return connectionFactory;
-    }
+	@Bean
+	public ConnectionFactory connectionFactory() {
+		String activeMqUrl = env.getProperty("spring.activemq.broker-url");
+		ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(activeMqUrl);
+		return connectionFactory;
+	}
 
 	public static void main(String[] args) {
-        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(TraveltodosAppApplication.class)
-                .headless(false).run(args);
+		ConfigurableApplicationContext ctx = new SpringApplicationBuilder(TraveltodosAppApplication.class)
+				.headless(false).run(args);
 
-        EventQueue.invokeLater(() -> {
-        	ctx.getBean(SwingApp.class);
-        });
+		EventQueue.invokeLater(() -> {
+			ctx.getBean(SwingApp.class);
+		});
 
 	}
 
 }
-

@@ -1,10 +1,22 @@
-package traveltodos.traveltodosapp;
+package com.traveltodos.gui;
 
-import com.jidesoft.swing.JideButton;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+
 import org.kie.api.KieServices;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.kie.api.runtime.rule.FactHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,17 +24,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.text.SimpleDateFormat;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
+import com.jidesoft.swing.JideButton;
+import com.traveltodos.messaging.MessageSender;
 
 @SpringBootApplication
 public class SwingApp extends JFrame {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 	private Logger logger = LoggerFactory.getLogger(SwingApp.class);
 
@@ -32,9 +43,12 @@ public class SwingApp extends JFrame {
 	private JPanel controlPanel;
 
 	@Autowired
-	MyMessageSender ms;
+	MessageSender ms;
+
 	@Autowired
 	private ApplicationContext appContext;
+
+	@Autowired
 	private Environment env;
 
 	TravelPlan plan = new TravelPlan();
@@ -53,10 +67,10 @@ public class SwingApp extends JFrame {
 	private void localSend(String msg) {
 		try {
 			if (appContext != null) {
-				ms = appContext.getBean(MyMessageSender.class);
+				ms = appContext.getBean(MessageSender.class);
 
 				if (ms != null) {
-					ms.sendMessage("todosQue", msg);
+					ms.sendMessage(msg);
 				} else {
 					logger.error("message is null, can't send:" + msg);
 				}
@@ -99,7 +113,7 @@ public class SwingApp extends JFrame {
 		frame.add(headerLabel);
 		frame.add(controlPanel);
 		frame.add(statusLabel);
-		
+
 		frame.setVisible(true);
 	}
 
@@ -115,7 +129,7 @@ public class SwingApp extends JFrame {
 		controlPanel.add(createButton("Baby"));
 
 		frame.add(createGenerateButton());
-		
+
 		frame.add(createJTextArea());
 
 		frame.setVisible(true);
@@ -144,7 +158,6 @@ public class SwingApp extends JFrame {
 		JideButton button = new JideButton(text);
 		button.setName("button_" + text);
 		button.addActionListener(e -> {
-			// localSend(statusLabel.getText());
 			logger.info(statusLabel.getText());
 
 			if (button.getForeground().getBlue() == 51 || button.getForeground().getBlue() == 0) {

@@ -1,4 +1,4 @@
-package traveltodos.traveltodosapp;
+package com.traveltodos.gui;
 
 public class TravelPlan {
 
