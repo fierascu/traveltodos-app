@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -11,26 +12,28 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
+import javax.annotation.PostConstruct;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
-import org.kie.api.io.ResourceType;
-import org.kie.internal.KnowledgeBase;
-import org.kie.internal.KnowledgeBaseFactory;
-import org.kie.internal.builder.DecisionTableConfiguration;
-import org.kie.internal.builder.DecisionTableInputType;
-import org.kie.internal.builder.KnowledgeBuilder;
-import org.kie.internal.builder.KnowledgeBuilderFactory;
+import org.kie.api.KieServices;
+import org.kie.api.builder.KieBuilder;
+import org.kie.api.builder.KieFileSystem;
+import org.kie.api.builder.KieRepository;
+import org.kie.api.builder.ReleaseId;
+import org.kie.api.io.Resource;
+import org.kie.api.runtime.KieContainer;
+import org.kie.api.runtime.KieSession;
 import org.kie.internal.io.ResourceFactory;
-import org.kie.internal.runtime.StatelessKnowledgeSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.jms.core.JmsTemplate;
 
 import com.jidesoft.swing.JideButton;
 import com.traveltodos.drools.TravelPlan;
@@ -51,59 +54,30 @@ public class SwingApp extends JFrame {
 	private JLabel statusLabel;
 	private JPanel controlPanel;
 	private JTextArea textArea;
-	private KnowledgeBase knowledgeBase;
-	private static StatelessKnowledgeSession session;
+
+	private static KieSession kieSession;
+
+	private MessageSender ms;
+
+	private final ApplicationContext appContext;
+
+	private final Environment env;
 
 	@Autowired
-	MessageSender ms;
+	public SwingApp(ApplicationContext appContext, Environment env, MessageSender ms) throws HeadlessException {
+		this.appContext = appContext;
+		this.env = env;
+		this.ms = ms;
 
-	@Autowired
-	private ApplicationContext appContext;
-
-	@Autowired
-	private Environment env;
-
-	/**
-	 * Create the application.
-	 */
-	public SwingApp() {
 		initialize();
 		showButtonsImplementation();
 		setUpDrools();
-	}
-
-	private void setUpDrools() {
-		try {
-			knowledgeBase = createKnowledgeBaseFromSpreadsheet();
-		} catch (Exception e1) {
-			logger.error(e1.getMessage());
-		}
-		session = knowledgeBase.newStatelessKnowledgeSession();
 
 	}
 
-	private void localSend(String msg) {
-		try {
-			if (appContext != null) {
-				ms = appContext.getBean(MessageSender.class);
-
-				if (ms != null) {
-					ms.sendMessage(msg);
-				} else {
-					logger.error("message is null, can't send:" + msg);
-				}
-			}
-		} catch (Exception e) {
-			logger.error(e.getMessage());
-		}
-	}
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		SwingApp window = new SwingApp();
-		window.showButtonsImplementation();
+	@PostConstruct
+	public void init() {
+		localSend("Start APP @ " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
 	}
 
 	/**
@@ -112,13 +86,11 @@ public class SwingApp extends JFrame {
 	private void initialize() {
 		frame = new JFrame("TravelTodosApp");
 		frame.setSize(700, 700);
-
+		frame.setLayout(new GridLayout(5, 1));
+		
 		String imagePath = "frame-icon.jpg";
 		Image icon = new javax.swing.ImageIcon(imagePath).getImage();
 		frame.setIconImage(icon);
-
-		frame.setLayout(new GridLayout(5, 1));
-		localSend("Start APP @ " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
 
 		frame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent windowEvent) {
@@ -126,6 +98,7 @@ public class SwingApp extends JFrame {
 				System.exit(0);
 			}
 		});
+		
 		headerLabel = new JLabel("", JLabel.CENTER);
 		statusLabel = new JLabel("", JLabel.CENTER);
 		statusLabel.setSize(100, 50);
@@ -159,6 +132,34 @@ public class SwingApp extends JFrame {
 		frame.setVisible(true);
 	}
 
+	private void setUpDrools() {
+
+		String rulesxlsFilename = env.getProperty("traveltodos.rulesxls-filename");
+
+		KieServices kieServices = KieServices.Factory.get();
+		Resource dt = ResourceFactory.newClassPathResource(rulesxlsFilename, getClass());
+
+		KieFileSystem kieFileSystem = kieServices.newKieFileSystem().write(dt);
+
+		KieBuilder kieBuilder = kieServices.newKieBuilder(kieFileSystem);
+		kieBuilder.buildAll();
+
+		KieRepository kieRepository = kieServices.getRepository();
+
+		ReleaseId krDefaultReleaseId = kieRepository.getDefaultReleaseId();
+		KieContainer kieContainer = kieServices.newKieContainer(krDefaultReleaseId);
+
+		kieSession = kieContainer.newKieSession();
+	}
+
+	private void localSend(String msg) {
+		try {
+			ms.sendMessage(msg);
+		} catch (Exception e) {
+			logger.error(e.getMessage());
+		}
+	}
+
 	private JTextArea createJTextArea() {
 		JTextArea comp = new JTextArea();
 		comp.setEditable(true);
@@ -171,28 +172,41 @@ public class SwingApp extends JFrame {
 		JideButton button = new JideButton("Generate");
 		button.setName("button_Generate");
 		button.addActionListener(e -> {
-			logger.info(statusLabel.getText());
-
-			HashMap<String, String> travelResultsMap = new HashMap<String, String>();
-			Component[] panelComponents = controlPanel.getComponents();
-			for (int i = 0; i < panelComponents.length; i++) {
-				if (((JideButton) panelComponents[i]).getName().startsWith("button_")
-						&& ((JideButton) panelComponents[i]).getForeground() == Color.BLUE) {
-
-					String buttonText = ((JideButton) panelComponents[i]).getText();
-
-					TravelPlan plan = new TravelPlan(buttonText);
-					session.execute(plan);
-					travelResultsMap.put(plan.getType(), plan.getWanted());
-				}
-			}
-
-			String resultedString = travelResultsMap.values().toString();
-			textArea.setText(resultedString);
-			localSend(resultedString);
+			genarateButtonAction(button);
 
 		});
 		return button;
+	}
+
+	private void genarateButtonAction(JideButton button) {
+		logger.info(statusLabel.getText());
+
+		HashMap<String, String> travelResultsMap = new HashMap<String, String>();
+		Component[] panelComponents = controlPanel.getComponents();
+		for (int i = 0; i < panelComponents.length; i++) {
+			JideButton jideButton = (JideButton) panelComponents[i];
+			if (jideButton.getName().startsWith("button_") && jideButton.getForeground() == Color.BLUE) {
+
+				TravelPlan plan = new TravelPlan(jideButton.getText());
+				if (kieSession != null) {
+					kieSession.insert(plan);
+					kieSession.fireAllRules();
+
+					travelResultsMap.put(plan.getType(), plan.getWanted());
+
+					plan.setType(button.getText());
+				}
+			}
+		}
+
+		String resultedString;
+		if (travelResultsMap.isEmpty()) {
+			resultedString = "Please select at least one button!";			
+		} else {
+			resultedString = travelResultsMap.values().toString();
+		}
+		textArea.setText(resultedString);
+		localSend(resultedString);
 	}
 
 	private JideButton createButton(String text) {
@@ -200,58 +214,16 @@ public class SwingApp extends JFrame {
 		button.setName("button_" + text);
 		button.setForeground(Color.BLACK);
 		button.addActionListener(e -> {
-			logger.info(statusLabel.getText());
 
 			if (button.getForeground() == Color.BLACK) {
 				button.setForeground(Color.BLUE);
 			} else {
 				button.setForeground(Color.BLACK);
 			}
-//			plan.setType(button.getText());
-//
-//			KieSession session = openKieService();
-//
-//			session.insert(plan);
-//			session.fireAllRules();
-//
-//			if (map.containsKey(plan.getType())) {
-//				map.remove(plan.getType());
-//			} else {
-//				map.put(plan.getType(), plan.getWanted());
-//			}
 
 		});
 
 		return button;
-	}
-
-//	private KieSession openKieService() {
-//		KieSession kSession = null;
-//		try {
-//			KieServices ks = KieServices.Factory.get();
-//			KieContainer kContainer = ks.getKieClasspathContainer();
-//			kSession = kContainer.newKieSession("ksession-rule");
-//		} catch (Throwable t) {
-//			t.printStackTrace();
-//		}
-//		return kSession;
-//	}
-
-	private static KnowledgeBase createKnowledgeBaseFromSpreadsheet() throws Exception {
-		DecisionTableConfiguration dtconf = KnowledgeBuilderFactory.newDecisionTableConfiguration();
-		dtconf.setInputType(DecisionTableInputType.XLS);
-
-		KnowledgeBuilder knowledgeBuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
-		knowledgeBuilder.add(ResourceFactory.newClassPathResource("travel-plan-rules.xls"), ResourceType.DTABLE,
-				dtconf);
-
-		if (knowledgeBuilder.hasErrors()) {
-			throw new RuntimeException(knowledgeBuilder.getErrors().toString());
-		}
-
-		KnowledgeBase knowledgeBase = KnowledgeBaseFactory.newKnowledgeBase();
-		knowledgeBase.addKnowledgePackages(knowledgeBuilder.getKnowledgePackages());
-		return knowledgeBase;
 	}
 
 }

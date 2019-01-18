@@ -33,7 +33,8 @@ public class MessageReceiver {
 			String text = textMessage.getText();
 			logger.info("received: " + text);
 		} catch (JMSException e) {
-			e.printStackTrace();
+			logger.error("Error whie receiveMessage:" + textMessage + e.getMessage());
+			logger.debug("Error whie receiveMessage:" + textMessage, e);
 		}
 	}
 }
