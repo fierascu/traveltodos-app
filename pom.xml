@@ -24,6 +24,8 @@
 		<spring-boot-admin.version>2.1.1</spring-boot-admin.version>
 		<spring-cloud.version>Greenwich.RC2</spring-cloud.version>
 		<drools.version>6.4.0.Final</drools.version>
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<maven.build.timestamp.format>yyyyMMdd_HHmm</maven.build.timestamp.format>
 	</properties>
 
 	<dependencies>
@@ -188,6 +190,7 @@
 	</dependencyManagement>
 
 	<build>
+		<finalName>${project.artifactId}-${project.version}-${maven.build.timestamp}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
