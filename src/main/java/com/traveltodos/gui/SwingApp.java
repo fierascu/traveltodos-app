@@ -8,8 +8,6 @@ import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 
 import javax.annotation.PostConstruct;
@@ -18,34 +16,22 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
-import org.kie.api.KieServices;
-import org.kie.api.builder.KieBuilder;
-import org.kie.api.builder.KieFileSystem;
-import org.kie.api.builder.KieRepository;
-import org.kie.api.builder.ReleaseId;
-import org.kie.api.io.Resource;
-import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.kie.internal.io.ResourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
-import org.springframework.jms.core.JmsTemplate;
 
 import com.jidesoft.swing.JideButton;
+import com.traveltodos.config.GlobalProperties;
 import com.traveltodos.drools.TravelPlan;
 import com.traveltodos.drools.TravelPlanConfiguration;
 import com.traveltodos.messaging.MessageSender;
+import com.traveltodos.utils.Utils;
 
 @SpringBootApplication
 public class SwingApp extends JFrame {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	private Logger logger = LoggerFactory.getLogger(SwingApp.class);
@@ -55,15 +41,16 @@ public class SwingApp extends JFrame {
 	private JLabel statusLabel;
 	private JPanel controlPanel;
 	private JTextArea textArea;
-	
-	private static KieSession kieSession;
 
+	private static KieSession kieSession;
 	private MessageSender ms;
+	private GlobalProperties global;
 
 	@Autowired
-	public SwingApp(MessageSender ms, TravelPlanConfiguration tpc) throws HeadlessException {
+	public SwingApp(MessageSender ms, TravelPlanConfiguration tpc, GlobalProperties global) throws HeadlessException {
 		this.ms = ms;
 		SwingApp.kieSession = tpc.getKieSession();
+		this.global = global;
 
 		initialize();
 		showButtonsImplementation();
@@ -72,28 +59,28 @@ public class SwingApp extends JFrame {
 
 	@PostConstruct
 	public void init() {
-		localSend("Start APP @ " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
+		localSend("Start APP @ " + Utils.getTimeStampAsTime());
 	}
 
 	/**
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		frame = new JFrame("TravelTodosApp");
-		frame.setSize(700, 700);
+		frame = new JFrame(global.getAppName());
+		frame.setSize(global.getFrameX(), global.getFrameY());
 		frame.setLayout(new GridLayout(5, 1));
-		
+
 		String imagePath = "frame-icon.jpg";
 		Image icon = new javax.swing.ImageIcon(imagePath).getImage();
 		frame.setIconImage(icon);
 
 		frame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent windowEvent) {
-				localSend("QUIT");
+				localSend("Quit APP @ " + Utils.getTimeStampAsTime());
 				System.exit(0);
 			}
 		});
-		
+
 		headerLabel = new JLabel("", JLabel.CENTER);
 		statusLabel = new JLabel("", JLabel.CENTER);
 		statusLabel.setSize(100, 50);
@@ -131,7 +118,8 @@ public class SwingApp extends JFrame {
 		try {
 			ms.sendMessage(msg);
 		} catch (Exception e) {
-			logger.error(e.getMessage());
+			logger.error("Error sending: {} with errorMsg: {}", msg, e.getMessage());
+			logger.debug("Error sending: {}", msg, e);
 		}
 	}
 
@@ -154,8 +142,6 @@ public class SwingApp extends JFrame {
 	}
 
 	private void genarateButtonAction(JideButton button) {
-		logger.info(statusLabel.getText());
-
 		HashMap<String, String> travelResultsMap = new HashMap<String, String>();
 		Component[] panelComponents = controlPanel.getComponents();
 		for (int i = 0; i < panelComponents.length; i++) {
@@ -176,7 +162,7 @@ public class SwingApp extends JFrame {
 
 		String resultedString;
 		if (travelResultsMap.isEmpty()) {
-			resultedString = "Please select at least one button!";			
+			resultedString = "Please select at least one button!";
 		} else {
 			resultedString = travelResultsMap.values().toString();
 		}

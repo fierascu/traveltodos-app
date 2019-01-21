@@ -12,7 +12,8 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
+
+import com.traveltodos.config.GlobalProperties;
 
 @SpringBootApplication
 @Configuration
@@ -20,11 +21,11 @@ import org.springframework.core.env.Environment;
 public class TraveltodosAppApplication {
 
 	@Autowired
-	private Environment env;
+	private GlobalProperties global;
 
 	@Bean
 	public ConnectionFactory connectionFactory() {
-		String activeMqUrl = env.getProperty("spring.activemq.broker-url");
+		String activeMqUrl = global.getBrokerurl();
 		ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(activeMqUrl);
 		return connectionFactory;
 	}

@@ -13,16 +13,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import com.traveltodos.config.GlobalProperties;
+
 @Service
 public class TravelPlanConfiguration {
 
-	private final Environment env;
+	private GlobalProperties global;
 
 	private KieSession kieSession;
 
 	@Autowired
-	public TravelPlanConfiguration(Environment env) {
-		this.env = env;
+	public TravelPlanConfiguration(Environment env, GlobalProperties global) {
+		this.global = global;
 		this.kieSession = createKieSession();
 	}
 
@@ -32,7 +34,7 @@ public class TravelPlanConfiguration {
 
 	private KieSession createKieSession() {
 
-		String rulesxlsFilename = env.getProperty("traveltodos.rulesxls-filename");
+		String rulesxlsFilename = global.getRulesXlsFilename();
 
 		KieServices kieServices = KieServices.Factory.get();
 		Resource dt = ResourceFactory.newClassPathResource(rulesxlsFilename, getClass());
