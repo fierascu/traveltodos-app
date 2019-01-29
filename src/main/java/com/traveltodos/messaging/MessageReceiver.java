@@ -31,10 +31,10 @@ public class MessageReceiver {
 		TextMessage textMessage = (TextMessage) message;
 		try {
 			String text = textMessage.getText();
-			logger.info("received: " + text);
+			logger.info("received: {}", text);
 		} catch (JMSException e) {
-			logger.error("Error whie receiveMessage:" + textMessage + e.getMessage());
-			logger.debug("Error whie receiveMessage:" + textMessage, e);
+			logger.error("Error whie receiveMessage:{} with errMsg:{}", textMessage, e.getMessage());
+			logger.debug("Error whie receiveMessage:{}", textMessage, e);
 		}
 	}
 }
