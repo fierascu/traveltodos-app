@@ -21,10 +21,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.env.Environment;
 
 import com.jidesoft.swing.JideButton;
 import com.traveltodos.config.GlobalProperties;
-import com.traveltodos.drools.TravelPlan;
 import com.traveltodos.drools.TravelPlanConfiguration;
 import com.traveltodos.messaging.MessageSender;
 import com.traveltodos.utils.Utils;
@@ -42,14 +42,24 @@ public class SwingApp extends JFrame {
 	private JPanel controlPanel;
 	private JTextArea textArea;
 
+
+	private TravelPlanConfiguration tpc;
+
+	private final Environment env;
+
+
 	private static KieSession kieSession;
 	private MessageSender ms;
+
 	private GlobalProperties global;
 
+
 	@Autowired
-	public SwingApp(MessageSender ms, TravelPlanConfiguration tpc, GlobalProperties global) throws HeadlessException {
+	public SwingApp(MessageSender ms, Environment env, GlobalProperties global) throws HeadlessException {
+		String file = env.getProperty("traveltodos.rulesxls-filename");
 		this.ms = ms;
-		SwingApp.kieSession = tpc.getKieSession();
+		this.env = env;
+		this.tpc = new TravelPlanConfiguration(file);
 		this.global = global;
 
 		initialize();
@@ -147,16 +157,9 @@ public class SwingApp extends JFrame {
 		for (int i = 0; i < panelComponents.length; i++) {
 			JideButton jideButton = (JideButton) panelComponents[i];
 			if (jideButton.getName().startsWith("button_") && jideButton.getForeground() == Color.BLUE) {
-
-				TravelPlan plan = new TravelPlan(jideButton.getText());
-				if (kieSession != null) {
-					kieSession.insert(plan);
-					kieSession.fireAllRules();
-
-					travelResultsMap.put(plan.getType(), plan.getWanted());
-
-					plan.setType(button.getText());
-				}
+				String keepType = jideButton.getText();
+				String wanted = tpc.getWantedValue(keepType);
+				travelResultsMap.put(keepType, wanted);
 			}
 		}
 

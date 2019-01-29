@@ -9,33 +9,17 @@ import org.kie.api.io.Resource;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.internal.io.ResourceFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Service;
+import com.traveltodos.drools.TravelPlan;
 
-import com.traveltodos.config.GlobalProperties;
-
-@Service
 public class TravelPlanConfiguration {
-
-	private GlobalProperties global;
 
 	private KieSession kieSession;
 
-	@Autowired
-	public TravelPlanConfiguration(Environment env, GlobalProperties global) {
-		this.global = global;
-		this.kieSession = createKieSession();
+	public TravelPlanConfiguration(String fileName) {
+		this.kieSession = createKieSession(fileName);
 	}
 
-	public KieSession getKieSession() {
-		return kieSession;
-	}
-
-	private KieSession createKieSession() {
-
-		String rulesxlsFilename = global.getRulesXlsFilename();
-
+	public KieSession createKieSession(String rulesxlsFilename) {
 		KieServices kieServices = KieServices.Factory.get();
 		Resource dt = ResourceFactory.newClassPathResource(rulesxlsFilename, getClass());
 
@@ -52,4 +36,10 @@ public class TravelPlanConfiguration {
 		return kieContainer.newKieSession();
 	}
 
+	public String getWantedValue(String type) {
+		TravelPlan plan = new TravelPlan(type);
+		kieSession.insert(plan);
+		kieSession.fireAllRules();
+		return plan.getWanted();
+	}
 }
