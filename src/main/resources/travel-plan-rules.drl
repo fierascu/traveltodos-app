@@ -1,0 +1,42 @@
+//created on: Jan 29, 2019
+//package traveltodos-app/src/main/resources
+
+//list any import classes here.
+import com.traveltodos.drools.TravelPlan
+
+//declare any global variables here
+
+rule "Choose Male"
+
+    when
+        productObject: TravelPlan(type == "Male")
+    then
+        productObject.setWanted("book");
+end
+
+rule "Choose Female"
+    //include attributes such as "salience" here...
+    when
+        productObject: TravelPlan(type == "Female")
+    then
+        productObject.setWanted("kindle");
+
+end
+
+rule "Choose Kids"
+    //include attributes such as "salience" here...
+    when
+        productObject: TravelPlan(type == "Kids")
+    then
+        productObject.setWanted("toys");
+
+end
+
+rule "Choose Baby"
+    //include attributes such as "salience" here...
+    when
+        productObject: TravelPlan(type == "Baby")
+    then
+        productObject.setWanted("clothes");
+
+end
