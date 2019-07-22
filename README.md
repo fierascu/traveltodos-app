@@ -17,4 +17,7 @@
 ## ToDos
 1. move credentials and port config to environment file
 2. change default user/pass
-3. deliveribles: asembly target & bat to start both
+3. deliveribles: asembly target & bat to start both 
+
+## Inspiration
+https://www.travelschecklist.com/
