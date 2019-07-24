@@ -23,7 +23,7 @@
 6. expand and add more rules
 7. junit tests
 8. secure conection between client and server
-9. other client (angular/reaect)
+9. other client (angular/react)
 
 ## Inspiration
 https://www.travelschecklist.com/
