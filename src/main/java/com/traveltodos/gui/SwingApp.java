@@ -8,9 +8,15 @@ import java.awt.HeadlessException;
 import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.annotation.PostConstruct;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.TextMessage;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -20,12 +26,15 @@ import org.kie.api.runtime.KieSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.env.Environment;
 
 import com.jidesoft.swing.JideButton;
 import com.traveltodos.config.GlobalProperties;
 import com.traveltodos.drools.TravelPlanConfiguration;
+import com.traveltodos.messaging.MessageBrowser;
+import com.traveltodos.messaging.MessageReceiver;
 import com.traveltodos.messaging.MessageSender;
 import com.traveltodos.utils.Utils;
 
@@ -41,7 +50,8 @@ public class SwingApp extends JFrame {
 	private JLabel statusLabel;
 	private JPanel controlPanel;
 	private JTextArea textArea;
-
+	private JTextArea textAreaReceive;
+	private JTextArea textAreaBrowse;
 
 	private TravelPlanConfiguration tpc;
 
@@ -50,14 +60,19 @@ public class SwingApp extends JFrame {
 
 	private static KieSession kieSession;
 	private MessageSender ms;
+	private MessageReceiver mr;
+	private MessageBrowser mb;
 
 	private GlobalProperties global;
-
+	@Value("${spring.activemq.que-name}")
+	private String qName;
 
 	@Autowired
-	public SwingApp(MessageSender ms, Environment env, GlobalProperties global) throws HeadlessException {
+	public SwingApp(MessageSender ms, MessageReceiver mr, MessageBrowser mb, Environment env, GlobalProperties global) throws HeadlessException {
 		String file = env.getProperty("traveltodos.rulesxls-filename");
 		this.ms = ms;
+		this.mr = mr;
+		this.mb = mb;
 		this.env = env;
 		this.tpc = new TravelPlanConfiguration(file);
 		this.global = global;
@@ -81,7 +96,7 @@ public class SwingApp extends JFrame {
 		frame.setLayout(new GridLayout(5, 1));
 
 		String imagePath = "frame-icon.jpg";
-		Image icon = new javax.swing.ImageIcon(imagePath).getImage();
+		Image icon = new ImageIcon(imagePath).getImage();
 		frame.setIconImage(icon);
 
 		frame.addWindowListener(new WindowAdapter() {
@@ -91,7 +106,7 @@ public class SwingApp extends JFrame {
 			}
 		});
 
-		headerLabel = new JLabel("", JLabel.CENTER);
+		headerLabel = new JLabel("", JLabel.LEFT);
 		statusLabel = new JLabel("", JLabel.CENTER);
 		statusLabel.setSize(100, 50);
 
@@ -115,11 +130,19 @@ public class SwingApp extends JFrame {
 		controlPanel.add(createButton("Kids"));
 
 		controlPanel.add(createButton("Baby"));
-
+		
 		frame.add(createGenerateButton());
-
+		frame.add(createConsumeButton());
+		frame.add(createBrowseButton());
+		
 		textArea = createJTextArea();
 		frame.add(textArea);
+		
+		textAreaReceive = createJTextArea();
+		frame.add(textAreaReceive);
+		
+		textAreaBrowse = createJTextArea();
+		frame.add(textAreaBrowse);
 
 		frame.setVisible(true);
 	}
@@ -132,6 +155,29 @@ public class SwingApp extends JFrame {
 			logger.debug("Error sending: {}", msg, e);
 		}
 	}
+	
+	private String localReceive(String qName) {
+		try {
+			return mr.receiveMessage(qName);
+		} catch (Exception e) {
+			logger.error("Error receiving on Q: {} with errorMsg: {}", qName, e.getMessage());
+			logger.debug("Error receiving on Q: {}", qName, e);
+		}
+		
+		return "NA";
+	}
+	
+	private List<Message> localBrowse(String qName) {
+		List<Message> messages = new ArrayList<Message>();
+		try {
+			messages = mb.browseMessages(qName);
+		} catch (Exception e) {
+			logger.error("Error browsing Q: {} with errorMsg: {}", qName, e.getMessage());
+			logger.debug("Error browsing Q: {}", qName, e);
+		}
+		
+		return messages;
+	}
 
 	private JTextArea createJTextArea() {
 		JTextArea comp = new JTextArea();
@@ -141,6 +187,26 @@ public class SwingApp extends JFrame {
 		return comp;
 	}
 
+	private JideButton createConsumeButton() {
+		JideButton button = new JideButton("Consume");
+		button.setName("button_Consume");
+		button.addActionListener(e -> {
+			consumeButtonAction(button);
+
+		});
+		return button;
+	}
+	
+	private JideButton createBrowseButton() {
+		JideButton button = new JideButton("Browse");
+		button.setName("button_Browse");
+		button.addActionListener(e -> {
+			browseButtonAction(button);
+
+		});
+		return button;
+	}
+	
 	private JideButton createGenerateButton() {
 		JideButton button = new JideButton("Generate");
 		button.setName("button_Generate");
@@ -172,9 +238,29 @@ public class SwingApp extends JFrame {
 		textArea.setText(resultedString);
 		localSend(resultedString);
 	}
+	
+	private void consumeButtonAction(JideButton button) {
+		textAreaReceive.setText(localReceive(qName));
+	}
+	
+	private void browseButtonAction(JideButton button) {
+		textAreaBrowse.setAutoscrolls(true);
+		textAreaBrowse.setText("");
+		localBrowse(qName).forEach(e -> {
+			try {
+				String msg = ((TextMessage) e).getText();
+				
+				textAreaBrowse.append(msg + "\n");
+			} catch (JMSException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		});
+	}
 
 	private JideButton createButton(String text) {
 		JideButton button = new JideButton(text);
+		button.setSize(50, 20);
 		button.setName("button_" + text);
 		button.setForeground(Color.BLACK);
 		button.addActionListener(e -> {
