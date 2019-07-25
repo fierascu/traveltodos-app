@@ -64,8 +64,6 @@ public class SwingApp extends JFrame {
 	private MessageBrowser mb;
 
 	private GlobalProperties global;
-	@Value("${spring.activemq.que-name}")
-	private String qName;
 
 	@Autowired
 	public SwingApp(MessageSender ms, MessageReceiver mr, MessageBrowser mb, Environment env, GlobalProperties global) throws HeadlessException {
@@ -156,24 +154,24 @@ public class SwingApp extends JFrame {
 		}
 	}
 	
-	private String localReceive(String qName) {
+	private String localReceive() {
 		try {
-			return mr.receiveMessage(qName);
+			return mr.receiveMessage(global.getActivemqQueName());
 		} catch (Exception e) {
-			logger.error("Error receiving on Q: {} with errorMsg: {}", qName, e.getMessage());
-			logger.debug("Error receiving on Q: {}", qName, e);
+			logger.error("Error receiving on Q: {} with errorMsg: {}", global.getActivemqQueName(), e.getMessage());
+			logger.debug("Error receiving on Q: {}", global.getActivemqQueName(), e);
 		}
 		
 		return "NA";
 	}
 	
-	private List<Message> localBrowse(String qName) {
+	private List<Message> localBrowse() {
 		List<Message> messages = new ArrayList<Message>();
 		try {
-			messages = mb.browseMessages(qName);
+			messages = mb.browseMessages(global.getActivemqQueName());
 		} catch (Exception e) {
-			logger.error("Error browsing Q: {} with errorMsg: {}", qName, e.getMessage());
-			logger.debug("Error browsing Q: {}", qName, e);
+			logger.error("Error browsing Q: {} with errorMsg: {}", global.getActivemqQueName(), e.getMessage());
+			logger.debug("Error browsing Q: {}", global.getActivemqQueName(), e);
 		}
 		
 		return messages;
@@ -240,13 +238,13 @@ public class SwingApp extends JFrame {
 	}
 	
 	private void consumeButtonAction(JideButton button) {
-		textAreaReceive.setText(localReceive(qName));
+		textAreaReceive.setText(localReceive());
 	}
 	
 	private void browseButtonAction(JideButton button) {
 		textAreaBrowse.setAutoscrolls(true);
 		textAreaBrowse.setText("");
-		localBrowse(qName).forEach(e -> {
+		localBrowse().forEach(e -> {
 			try {
 				String msg = ((TextMessage) e).getText();
 				
