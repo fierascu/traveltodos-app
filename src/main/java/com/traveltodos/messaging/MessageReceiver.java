@@ -26,15 +26,18 @@ public class MessageReceiver {
 		this.jmsTemplate = new JmsTemplate(connectionFactory);
 	}
 
-	public void receiveMessage(String queueName) {
+	public String receiveMessage(String queueName) {
 		Message message = jmsTemplate.receive(queueName);
 		TextMessage textMessage = (TextMessage) message;
+		String text = "NA";
 		try {
-			String text = textMessage.getText();
+			text = textMessage.getText();
 			logger.info("received: {}", text);
 		} catch (JMSException e) {
 			logger.error("Error whie receiveMessage:{} with errMsg:{}", textMessage, e.getMessage());
 			logger.debug("Error whie receiveMessage:{}", textMessage, e);
 		}
+		
+		return text;
 	}
 }
